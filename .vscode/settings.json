@@ -1,0 +1,5 @@
+{
+    "C_Cpp.default.configurationProvider": "mesonbuild.mesonbuild",
+    "mesonbuild.configureOnOpen": true,
+    "C_Cpp.default.compileCommands": "c:\\Users\\goldp\\VSProjects\\smlsharp\\builddir/compile_commands.json"
+}
