@@ -1,0 +1,31 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ "master" ,"newer_llvm","automatic_test"]
+  pull_request:
+    branches: [ "master" ,"newer_llvm","automatic_test"]
+# from PR #71 we can't compile bootstrap compiler with llvm-9 or earlier therefore we don't check compatiblity for that.
+jobs:
+#special case we need to install MassiveThreads mannually.
+  llvm10:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+            packages: llvm-10 libgmp-dev
+            version: 1.0
+      - uses: actions/checkout@v4
+        with:
+            repository: 'massivethreads/massivethreads'
+            ref: 'master'
+            path: 'massivethreads'
+      - name: ls
+        run: ls -l
+      - name: configure
+        run: ./configure
+      - name: make
+        run: make -j4
+      - name: test
+        run: make test -j4
