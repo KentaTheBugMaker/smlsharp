@@ -27,6 +27,8 @@ jobs:
             ./configure
             make -j4
             sudo make install
+      - name: set symbolic link for llvm-config
+        run: sudo ln -s /bin/llvm-config-10 /bin/llvm-config
       - name: configure
         run: ./configure
       - name: make
