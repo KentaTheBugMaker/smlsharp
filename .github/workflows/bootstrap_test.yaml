@@ -21,8 +21,12 @@ jobs:
             repository: 'massivethreads/massivethreads'
             ref: 'master'
             path: 'massivethreads'
-      - name: ls
-        run: ls -l
+      - name: install MassiveThreads
+        working-directory: massivethreads
+        run: |
+            ./configure
+            make -j4
+            sudo make install
       - name: configure
         run: ./configure
       - name: make
