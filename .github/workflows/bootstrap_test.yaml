@@ -11,7 +11,7 @@ jobs:
   llvm10:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v4
+
       - uses: awalsh128/cache-apt-pkgs-action@latest
         with:
             packages: llvm-10 libgmp-dev
@@ -29,9 +29,15 @@ jobs:
             sudo make install
       - name: set symbolic link for llvm-config
         run: sudo ln -s /bin/llvm-config-10 /bin/llvm-config
+      - uses: actions/checkout@v4
+        with:
+            path: 'smlsharp'
       - name: configure
+        working-directory: 'smlsharp'
         run: ./configure
       - name: make
+        working-directory: 'smlsharp'
         run: make -j4
       - name: test
+        working-directory: 'smlsharp'
         run: make test -j4
