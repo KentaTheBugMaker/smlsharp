@@ -11,7 +11,6 @@ jobs:
   llvm10:
     runs-on: ubuntu-20.04
     steps:
-
       - uses: awalsh128/cache-apt-pkgs-action@latest
         with:
             packages: llvm-10 libgmp-dev
@@ -29,6 +28,182 @@ jobs:
             sudo make install
       - name: set symbolic link for llvm-config
         run: sudo ln -s /bin/llvm-config-10 /bin/llvm-config
+      - uses: actions/checkout@v4
+        with:
+            path: 'smlsharp'
+            fetch-depth: 0
+      - name: configure
+        working-directory: 'smlsharp'
+        run: ./configure
+      - name: make
+        working-directory: 'smlsharp'
+        run: make -j4
+      - name: test
+        working-directory: 'smlsharp'
+        run: make test -j4
+  llvm11:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+            packages: llvm-11 libgmp-dev libmassivethreads-dev
+            version: 1.0
+      - name: set symbolic link for llvm-config
+        run: sudo ln -s /bin/llvm-config-11 /bin/llvm-config
+      - uses: actions/checkout@v4
+        with:
+            path: 'smlsharp'
+            fetch-depth: 0
+      - name: configure
+        working-directory: 'smlsharp'
+        run: ./configure
+      - name: make
+        working-directory: 'smlsharp'
+        run: make -j4
+      - name: test
+        working-directory: 'smlsharp'
+        run: make test -j4
+  llvm12:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+            packages: llvm-12 libgmp-dev libmassivethreads-dev
+            version: 1.0
+      - name: set symbolic link for llvm-config
+        run: sudo ln -s /bin/llvm-config-12 /bin/llvm-config
+      - uses: actions/checkout@v4
+        with:
+            path: 'smlsharp'
+            fetch-depth: 0
+      - name: configure
+        working-directory: 'smlsharp'
+        run: ./configure
+      - name: make
+        working-directory: 'smlsharp'
+        run: make -j4
+      - name: test
+        working-directory: 'smlsharp'
+        run: make test -j4
+  llvm13:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+            packages: llvm-13 libgmp-dev libmassivethreads-dev
+            version: 1.0
+      - name: set symbolic link for llvm-config
+        run: sudo ln -s /bin/llvm-config-13 /bin/llvm-config
+      - uses: actions/checkout@v4
+        with:
+            path: 'smlsharp'
+            fetch-depth: 0
+      - name: configure
+        working-directory: 'smlsharp'
+        run: ./configure
+      - name: make
+        working-directory: 'smlsharp'
+        run: make -j4
+      - name: test
+        working-directory: 'smlsharp'
+        run: make test -j4
+  llvm14:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+            packages: llvm-14 libgmp-dev libmassivethreads-dev
+            version: 1.0
+      - name: set symbolic link for llvm-config
+        run: sudo ln -s /bin/llvm-config-14 /bin/llvm-config
+      - uses: actions/checkout@v4
+        with:
+            path: 'smlsharp'
+            fetch-depth: 0
+      - name: configure
+        working-directory: 'smlsharp'
+        run: ./configure
+      - name: make
+        working-directory: 'smlsharp'
+        run: make -j4
+      - name: test
+        working-directory: 'smlsharp'
+        run: make test -j4
+  llvm15:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+            packages: llvm-15 libgmp-dev libmassivethreads-dev
+            version: 1.0
+      - name: set symbolic link for llvm-config
+        run: sudo ln -s /bin/llvm-config-15 /bin/llvm-config
+      - uses: actions/checkout@v4
+        with:
+            path: 'smlsharp'
+            fetch-depth: 0
+      - name: configure
+        working-directory: 'smlsharp'
+        run: ./configure
+      - name: make
+        working-directory: 'smlsharp'
+        run: make -j4
+      - name: test
+        working-directory: 'smlsharp'
+        run: make test -j4
+  llvm16:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+            packages: llvm-16 libgmp-dev libmassivethreads-dev
+            version: 1.0
+      - name: set symbolic link for llvm-config
+        run: sudo ln -s /bin/llvm-config-16 /bin/llvm-config
+      - uses: actions/checkout@v4
+        with:
+            path: 'smlsharp'
+            fetch-depth: 0
+      - name: configure
+        working-directory: 'smlsharp'
+        run: ./configure
+      - name: make
+        working-directory: 'smlsharp'
+        run: make -j4
+      - name: test
+        working-directory: 'smlsharp'
+        run: make test -j4
+  llvm17:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+            packages: llvm-17 libgmp-dev libmassivethreads-dev
+            version: 1.0
+      - name: set symbolic link for llvm-config
+        run: sudo ln -s /bin/llvm-config-17 /bin/llvm-config
+      - uses: actions/checkout@v4
+        with:
+            path: 'smlsharp'
+            fetch-depth: 0
+      - name: configure
+        working-directory: 'smlsharp'
+        run: ./configure
+      - name: make
+        working-directory: 'smlsharp'
+        run: make -j4
+      - name: test
+        working-directory: 'smlsharp'
+        run: make test -j4
+  llvm18:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+            packages: llvm-18 libgmp-dev libmassivethreads-dev
+            version: 1.0
+      - name: set symbolic link for llvm-config
+        run: sudo ln -s /bin/llvm-config-18 /bin/llvm-config
       - uses: actions/checkout@v4
         with:
             path: 'smlsharp'
