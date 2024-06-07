@@ -22,8 +22,9 @@ jobs:
             path: 'massivethreads'
       - name: install MassiveThreads
         working-directory: massivethreads
+#the default install prefix is not suitable.
         run: |
-            ./configure
+            ./configure --prefix=/usr
             make -j4
             sudo make install
       - name: set symbolic link for llvm-config
