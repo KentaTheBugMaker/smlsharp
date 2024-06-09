@@ -42,6 +42,8 @@ jobs:
       - name: test
         working-directory: 'smlsharp'
         run: make test -j4
+        env:
+          TZ: 'Asia/Tokyo'
   llvm11:
     runs-on: ubuntu-22.04
     steps:
@@ -64,6 +66,8 @@ jobs:
       - name: test
         working-directory: 'smlsharp'
         run: make test -j4
+        env:
+          TZ: 'Asia/Tokyo'
   llvm12:
     runs-on: ubuntu-22.04
     steps:
@@ -86,6 +90,8 @@ jobs:
       - name: test
         working-directory: 'smlsharp'
         run: make test -j4
+        env:
+          TZ: 'Asia/Tokyo'
   llvm13:
     runs-on: ubuntu-22.04
     steps:
@@ -108,6 +114,8 @@ jobs:
       - name: test
         working-directory: 'smlsharp'
         run: make test -j4
+        env:
+          TZ: 'Asia/Tokyo'
   llvm14:
     runs-on: ubuntu-24.04
     steps:
@@ -130,6 +138,8 @@ jobs:
       - name: test
         working-directory: 'smlsharp'
         run: make test -j4
+        env:
+          TZ: 'Asia/Tokyo'
   llvm15:
     runs-on: ubuntu-24.04
     steps:
@@ -152,6 +162,8 @@ jobs:
       - name: test
         working-directory: 'smlsharp'
         run: make test -j4
+        env:
+          TZ: 'Asia/Tokyo'
   llvm16:
     runs-on: ubuntu-24.04
     steps:
@@ -174,6 +186,8 @@ jobs:
       - name: test
         working-directory: 'smlsharp'
         run: make test -j4
+        env:
+          TZ: 'Asia/Tokyo'
   llvm17:
     runs-on: ubuntu-24.04
     steps:
@@ -196,6 +210,8 @@ jobs:
       - name: test
         working-directory: 'smlsharp'
         run: make test -j4
+        env:
+          TZ: 'Asia/Tokyo'
   llvm18:
     runs-on: ubuntu-24.04
     steps:
@@ -218,3 +234,5 @@ jobs:
       - name: test
         working-directory: 'smlsharp'
         run: make test -j4
+        env:
+          TZ: 'Asia/Tokyo'
