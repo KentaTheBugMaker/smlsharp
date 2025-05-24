@@ -10,6 +10,7 @@
 *.grm.sig
 *.grm.sml
 *~
+/smlsharp_rt/target
 /Makefile
 /RELEASE
 /autom4te.cache
