@@ -6,3 +6,6 @@ edition = "2024"
 crate-type = ["staticlib"]
 [dependencies]
 libc="0.2"
+tracing="0.1"
+tracing-subscriber="0.3"
+printf-compat = "0.1.1"

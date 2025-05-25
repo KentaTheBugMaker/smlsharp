@@ -6,7 +6,7 @@ use std::{
 
 use libc::{SIG_DFL, SIGHUP, SIGINT, SIGPIPE, SIGTERM, c_int, sigaction, sigemptyset};
 
-use crate::{sml_debug, sml_gc, sml_set_check_hook, sml_warn};
+use crate::{sml_gc, sml_set_check_hook};
 
 static SIGNALS: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
 pub type SmlCheckHookFn = unsafe extern "C" fn() -> ();
@@ -34,14 +34,16 @@ static SIGNAL_HOOK: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUs
 ///
 ///
 extern "C" fn sml_signal_check() -> u32 {
-    unsafe { sml_debug(b"Rust impl signal.rs sml_signal_check\0".as_ptr() as *const c_char) };
+    tracing::debug!(target:"sml_signal_check","Rust impl signal.rs enter");
     let r = SIGNALS.load(Relaxed);
+    tracing::debug!(target:"sml_signal_check","Rust impl signal.rs exit");
     if r != 0 { SIGNALS.swap(0, Relaxed) } else { 0 }
 }
 
 const CHAR_BIT: usize = 8;
 
 extern "C" fn signal_handler(signum: i32) {
+    tracing::debug!(target:"signal_handler","Rust impl signal.rs enter");
     if (signum
         < (size_of::<std::sync::atomic::AtomicU32>() * CHAR_BIT)
             .try_into()
@@ -52,49 +54,50 @@ extern "C" fn signal_handler(signum: i32) {
         unsafe { sml_set_check_hook(transmute(SIGNAL_HOOK.load(Relaxed))) };
         unsafe { sml_gc(0) };
     }
+    tracing::debug!(target:"signal_handler","Rust impl signal.rs exit");
 }
 
 fn do_sigaction(signum: i32, signame: &str, sa: *const sigaction) -> i32 {
+    tracing::debug!(target:"do_sigaction","Rust impl signal.rs enter");
     let mut old = unsafe { std::mem::zeroed() };
     let mut r = unsafe { sigaction(signum, sa, &raw mut old) };
-    let signame = CString::new(signame).unwrap();
     if (r == 0) && (old.sa_sigaction != SIG_DFL) {
-        unsafe {
-            sml_warn(
-                0,
-                b"%s handler is already set\0".as_ptr() as *const c_char,
-                signame.as_ptr(),
-            )
-        };
+        tracing::warn!(target:"do_sigaction","{signame}Success handler is already set");
         r = unsafe { sigaction(signum, &raw const old, std::ptr::null_mut()) };
     }
+    tracing::debug!(target:"do_sigaction","Rust impl signal.rs exit");
     return r;
 }
 #[unsafe(no_mangle)]
 extern "C" fn sml_signal_sigaction(hook: SmlCheckHookFn) -> c_int {
-    unsafe { sml_debug(b"Rust impl signal.rs sml_signal_sigaction\0".as_ptr() as *const c_char) };    
+    tracing::debug!(target:"sml_signal_sigaction","Rust impl signal.rs enter");
     SIGNAL_HOOK.store(unsafe { transmute(hook) }, Relaxed);
     let mut sa: sigaction = unsafe { std::mem::zeroed() };
     sa.sa_sigaction = unsafe { std::mem::transmute(signal_handler as *const usize) };
     sa.sa_flags = 0;
     let mut r = unsafe { sigemptyset(&mut sa.sa_mask) };
     if r != 0 {
+        tracing::debug!(target:"sml_signal_sigaction","Rust impl signal.rs exit");
         return r;
     }
     r = do_sigaction(SIGINT, "SIGINT", &sa);
     if r != 0 {
+        tracing::debug!(target:"sml_signal_sigaction","Rust impl signal.rs exit");
         return r;
     }
     r = do_sigaction(SIGHUP, "SIGHUP", &sa);
     if r != 0 {
+        tracing::debug!(target:"sml_signal_sigaction","Rust impl signal.rs exit");
         return r;
     }
     r = do_sigaction(SIGPIPE, "SIGPIPE", &sa);
     if r != 0 {
+        tracing::debug!(target:"sml_signal_sigaction","Rust impl signal.rs exit");
         return r;
     }
     r = do_sigaction(SIGTERM, "SIGTERM", &sa);
     if r != 0 {
+        tracing::debug!(target:"sml_signal_sigaction","Rust impl signal.rs exit");
         return r;
     }
     return 0;

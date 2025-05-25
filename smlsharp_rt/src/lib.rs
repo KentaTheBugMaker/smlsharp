@@ -1,10 +1,11 @@
+#![feature(c_variadic)]
 use std::os::raw::c_ulong;
 
 use libc::{c_char, c_int};
 use signal::SmlCheckHookFn;
 
+mod error;
 mod signal;
-
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
@@ -22,7 +23,7 @@ mod tests {
 
 unsafe extern "C" {
     fn sml_gc(greedy: i32) -> c_ulong;
-    fn sml_warn(err:c_int,format : *const c_char,...);
-    fn sml_debug(format : *const c_char,...);
-    fn sml_set_check_hook(hook:SmlCheckHookFn);
+    fn sml_warn(err: c_int, format: *const c_char, ...);
+    fn sml_debug(format: *const c_char, ...);
+    fn sml_set_check_hook(hook: SmlCheckHookFn);
 }
