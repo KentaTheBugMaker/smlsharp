@@ -1,5 +1,3 @@
-use cc::Build;
-
 extern crate cc;
 /*
 CFLAGS = -g -O2 -fPIC
@@ -51,6 +49,8 @@ fn main(){
     .file("../src/runtime/top.c")
     .file("../src/runtime/xmalloc.c")
     .file("../src/runtime/livecheck.c")
+    .file("../src/sql/main/builtintypes/timestamp/string_to_time_t.c")
+    .file("../src/sql/main/builtintypes/timestamp/timeval_to_string.c")
     .object("../src/runtime/call_with_cleanup.o")
     .objects(dtoa)
 

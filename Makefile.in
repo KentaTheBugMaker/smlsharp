@@ -28,9 +28,11 @@ RUST_SOURCE = \
   src/runtime/splay.c \
   src/runtime/top.c \
   src/runtime/heap_concurrent.c \
-  smlsharp_rt/Cargo.toml\
-  smlsharp_rt/Cargo.lock 
-
+  smlsharp_rt/build.rs \
+  smlsharp_rt/Cargo.toml \
+  smlsharp_rt/Cargo.lock \
+  src/sql/main/builtintypes/timestamp/string_to_time_t.$(OBJEXT) \
+  src/sql/main/builtintypes/timestamp/timeval_to_string.$(OBJEXT)
 RUNTIME_OBJECTS = \
   src/runtime/callback.$(OBJEXT) \
   src/runtime/control.$(OBJEXT) \
@@ -229,7 +231,7 @@ include @srcdir@/precompiled/Makefile
                 $(PRECOMPILED_OBJECTS)
 	$(CC) $(LDFLAGS) src/runtime/main.$(OBJEXT) \
 	$(PRECOMPILED_OBJECTS) \
-	smlsharp_rt/target/release/libsmlsharp.$(LIBEXT) \
+	src/runtime/libsmlsharp.$(LIBEXT) \
 	$(LIBS) -o $@
 
 # -------- executables --------
@@ -249,9 +251,9 @@ $(SMLFORMAT): $(LINK_DEP) $(SMLFORMAT_OBJECTS)
 	-filemap=filemap \
 	$(srcdir)/src/smlformat/generator/main/call-main.smi -o $@
 
-$(SMLSHARP): $(LINK_DEP)  $(COMPILER_LIB_OBJECTS)
+$(SMLSHARP): $(LINK_DEP)
 	$(SMLSHARP_ENV) $(MINISMLSHARP) -B src -nostdpath $(SMLFLAGS) \
-	$(RDYNAMIC_SMLFLAGS) -filemap=filemap  -o $@
+	$(RDYNAMIC_SMLFLAGS)  -filemap=filemap $(srcdir)/src/compiler/smlsharp.smi -o $@
 
 src/compiler/minismlsharp: \
   $(LINK_DEP)  $(MINISMLSHARP_OBJECTS)
