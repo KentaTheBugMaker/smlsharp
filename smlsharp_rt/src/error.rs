@@ -9,6 +9,7 @@ use std::{
 
 use libc::{FILE, c_char, c_int, fprintf};
 use printf_compat::{format, output};
+use tracing::Level;
 use tracing_subscriber::{fmt::Layer, layer::SubscriberExt};
 
 #[repr(C)]
@@ -173,15 +174,10 @@ extern "C" fn sml_msg_init() {
                 .create(true)
                 .open(s)
                 .unwrap();
-            let subscriber =
-                tracing_subscriber::Registry::default().with(Layer::new().with_writer(debug_file));
-
-            tracing::subscriber::set_global_default(subscriber).unwrap();
+            tracing_subscriber::fmt().with_writer(debug_file).with_max_level(Level::TRACE).init();
         }
         Err(_) => {
-            let subscriber = tracing_subscriber::Registry::default();
-
-            tracing::subscriber::set_global_default(subscriber).unwrap();
+            tracing_subscriber::fmt().with_max_level(Level::TRACE).init();
         }
     };
 }
