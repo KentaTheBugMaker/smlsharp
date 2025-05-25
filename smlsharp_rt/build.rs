@@ -47,7 +47,7 @@ fn main(){
     .file("../src/runtime/prim.c")
     .file("../src/runtime/splay.c")
     .file("../src/runtime/top.c")
-    .file("../src/runtime/xmalloc.c")
+   // .file("../src/runtime/xmalloc.c")
     .file("../src/runtime/livecheck.c")
     .file("../src/sql/main/builtintypes/timestamp/string_to_time_t.c")
     .file("../src/sql/main/builtintypes/timestamp/timeval_to_string.c")

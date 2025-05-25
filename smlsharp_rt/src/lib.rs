@@ -6,6 +6,7 @@ use signal::SmlCheckHookFn;
 
 mod error;
 mod signal;
+mod xmalloc;
 pub fn add(left: u64, right: u64) -> u64 {
     left + right
 }
