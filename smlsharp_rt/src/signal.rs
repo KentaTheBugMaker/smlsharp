@@ -1,5 +1,4 @@
 use std::{
-    ffi::{CString, c_char},
     mem::transmute,
     sync::atomic::Ordering::Relaxed,
 };

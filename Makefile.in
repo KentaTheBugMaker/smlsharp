@@ -13,10 +13,27 @@ LLVM_PLUGIN = src/llvm/smlsharp_gc-$(LLVM_VERSION).$(DLLEXT)
 SMLSHARP_ENV = SMLSHARP_HEAPSIZE=32M:2G
 NETLIB_CFLAGS = $(CFLAGS) -DIEEE_8087 -DMALLOC=sml_xmalloc -DLong=int
 
+RUST_SOURCE = \
+  smlsharp_rt/src/lib.rs\
+  smlsharp_rt/src/error.rs\
+  smlsharp_rt/src/signal.rs\
+  src/runtime/callback.c \
+  src/runtime/control.c \
+  src/runtime/exn.c \
+  src/runtime/finalize.c \
+  src/runtime/init.c \
+  src/runtime/object.c \
+  src/runtime/xmalloc.c \
+  src/runtime/prim.c \
+  src/runtime/splay.c \
+  src/runtime/top.c \
+  src/runtime/heap_concurrent.c \
+  smlsharp_rt/Cargo.toml\
+  smlsharp_rt/Cargo.lock 
+
 RUNTIME_OBJECTS = \
   src/runtime/callback.$(OBJEXT) \
   src/runtime/control.$(OBJEXT) \
-  src/runtime/error.$(OBJEXT) \
   src/runtime/exn.$(OBJEXT) \
   src/runtime/finalize.$(OBJEXT) \
   src/runtime/init.$(OBJEXT) \
@@ -31,15 +48,9 @@ RUNTIME_OBJECTS = \
 RUNTIME_DEBUG_OBJECTS = \
   src/runtime/livecheck.$(OBJEXT) \
   src/runtime/dbglog.$(OBJEXT)
-LIBSMLSHARP_OBJECTS = \
-  $(RUNTIME_OBJECTS) \
-  src/runtime/call_with_cleanup.$(OBJEXT) \
-  src/runtime/netlib/dtoa.$(OBJEXT)
 LIBSMLSHARP_TARGETS = \
   src/runtime/main.$(OBJEXT) \
   src/runtime/libsmlsharp.$(LIBEXT)
-COMPILER_SUPPORT_OBJECTS = \
-  src/runtime/signal.$(OBJEXT)
 TEST_SUPPORT_OBJECTS = \
   tests/driver/process.$(OBJEXT)
 LLVM_PLUGIN_OBJECTS = \
@@ -71,8 +82,8 @@ all: $(ALL_TARGETS)
 
 clean: PHONY
 	-rm -f $(ALL_GEN_TARGETS)
-	-rm -f $(LIBSMLSHARP_OBJECTS) $(LLVM_PLUGIN_OBJECTS)
-	-rm -f $(COMPILER_SUPPORT_OBJECTS) $(TEST_SUPPORT_OBJECTS)
+	-rm -f $(LLVM_PLUGIN_OBJECTS)
+	-rm -f $(TEST_SUPPORT_OBJECTS)
 	-rm -f $(ALL_OBJECTS) $(ALL_GEN_FILES)
 @MKREL@	-rm -f RELEASE
 
@@ -104,11 +115,9 @@ install: PHONY $(ALL_TARGETS)
 	$(INSTALL_DATA) $(srcdir)/src/builtin.smi \
 	  '$(DESTDIR)$(libdir_smlsharp)/builtin.smi'
 	$(INSTALL) -d '$(DESTDIR)$(libdir_smlsharp)/runtime'
-	$(INSTALL_DATA) src/runtime/libsmlsharp.$(LIBEXT) \
+	$(INSTALL_DATA) src/runtime/lib_smlsharp.$(LIBEXT) \
 	  '$(DESTDIR)$(libdir_smlsharp)/runtime'
 	$(INSTALL_DATA) src/runtime/main.$(OBJEXT) \
-	  '$(DESTDIR)$(libdir_smlsharp)/runtime'
-	$(INSTALL_DATA) $(COMPILER_SUPPORT_OBJECTS) \
 	  '$(DESTDIR)$(libdir_smlsharp)/runtime'
 	$(INSTALL) -d '$(DESTDIR)$(libdir_smlsharp)/llvm'
 	$(INSTALL_PROGRAM) $(LLVM_PLUGIN) '$(DESTDIR)$(libdir_smlsharp)/llvm'
@@ -147,10 +156,12 @@ PHONY: # force to rebuild
 
 # -------- runtime --------
 
-src/runtime/libsmlsharp.$(LIBEXT): $(LIBSMLSHARP_OBJECTS)
-	-rm -f $@
-	$(AR) qc $@ $(LIBSMLSHARP_OBJECTS)
-	-$(RANLIB) $@
+src/runtime/libsmlsharp.$(LIBEXT) : $(RUST_SOURCE)
+	cd smlsharp_rt && \
+	cargo +nightly build --release && \
+	cd ../ &&\
+	cp smlsharp_rt/target/release/libsmlsharp.$(LIBEXT) src/runtime/libsmlsharp.$(LIBEXT)
+
 
 src/runtime/netlib/dtoa.$(OBJEXT): $(srcdir)/src/runtime/netlib/dtoa.c
 	$(CC) $(NETLIB_CFLAGS) -c -o $@ $(srcdir)/src/runtime/netlib/dtoa.c
@@ -214,11 +225,12 @@ PRECOMPILE_LLC = \
 
 include @srcdir@/precompiled/Makefile
 
-./minismlsharp: $(LIBSMLSHARP_TARGETS) $(COMPILER_SUPPORT_OBJECTS) \
+./minismlsharp: $(LIBSMLSHARP_TARGETS) \
                 $(PRECOMPILED_OBJECTS)
 	$(CC) $(LDFLAGS) src/runtime/main.$(OBJEXT) \
-	$(PRECOMPILED_OBJECTS) $(COMPILER_SUPPORT_OBJECTS) \
-	src/runtime/libsmlsharp.$(LIBEXT) $(LIBS) -o $@
+	$(PRECOMPILED_OBJECTS) \
+	smlsharp_rt/target/release/libsmlsharp.$(LIBEXT) \
+	$(LIBS) -o $@
 
 # -------- executables --------
 
@@ -237,22 +249,19 @@ $(SMLFORMAT): $(LINK_DEP) $(SMLFORMAT_OBJECTS)
 	-filemap=filemap \
 	$(srcdir)/src/smlformat/generator/main/call-main.smi -o $@
 
-$(SMLSHARP): $(LINK_DEP) $(COMPILER_SUPPORT_OBJECTS) $(COMPILER_LIB_OBJECTS)
+$(SMLSHARP): $(LINK_DEP)  $(COMPILER_LIB_OBJECTS)
 	$(SMLSHARP_ENV) $(MINISMLSHARP) -B src -nostdpath $(SMLFLAGS) \
-	$(RDYNAMIC_SMLFLAGS) -filemap=filemap \
-	$(srcdir)/src/compiler/smlsharp.smi $(COMPILER_SUPPORT_OBJECTS) -o $@
+	$(RDYNAMIC_SMLFLAGS) -filemap=filemap  -o $@
 
 src/compiler/minismlsharp: \
-  $(LINK_DEP) $(COMPILER_SUPPORT_OBJECTS) $(MINISMLSHARP_OBJECTS)
+  $(LINK_DEP)  $(MINISMLSHARP_OBJECTS)
 	$(SMLSHARP_ENV) $(MINISMLSHARP) -B src -nostdpath $(SMLFLAGS) \
-	-filemap=filemap $(srcdir)/src/compiler/minismlsharp.smi \
-	$(COMPILER_SUPPORT_OBJECTS) -o $@
+	-filemap=filemap $(srcdir)/src/compiler/minismlsharp.smi  -o $@
 
 tests/driver/dotest: $(LINK_DEP) $(TEST_OBJECTS) tests/driver/process.$(OBJEXT)
 	$(SMLSHARP_ENV) $(MINISMLSHARP) -B src -nostdpath $(SMLFILE) \
 	$(RDYNAMIC_SMLFLAGS) -filemap=filemap \
-	$(srcdir)/tests/driver/dotest.smi tests/driver/process.$(OBJEXT) \
-	$(COMPILER_SUPPORT_OBJECTS) -o $@
+	$(srcdir)/tests/driver/dotest.smi tests/driver/process.$(OBJEXT) -o $@
 
 # -------- source code generation --------
 
@@ -388,7 +397,6 @@ depend: PHONY minismlsharp
 	@set -e; \
 	for i in $(RUNTIME_OBJECTS:.$(OBJEXT)=.c) \
 	         $(RUNTIME_DEBUG_OBJECTS:.$(OBJEXT)=.c) \
-	         $(COMPILER_SUPPORT_OBJECTS:.$(OBJEXT)=.c) \
 	         $(TEST_SUPPORT_OBJECTS:.$(OBJEXT)=.c) \
 	         src/runtime/main.c; do \
 	  echo $(CC) -E -MM $(DEFS) $(CPPFLAGS) $$i 1>&2; \

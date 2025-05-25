@@ -1,16 +1,12 @@
 use std::{
-    ffi::{CStr, CString},
-    fs::{File, OpenOptions},
-    io::stderr,
+    fs::OpenOptions,
     process::abort,
-    str::FromStr,
-    sync::{Mutex, OnceLock},
+    sync::OnceLock,
 };
 
-use libc::{FILE, c_char, c_int, fprintf};
-use printf_compat::{format, output};
+use libc::{c_char, c_int};
+use printf_compat::output;
 use tracing::Level;
-use tracing_subscriber::{fmt::Layer, layer::SubscriberExt};
 
 #[repr(C)]
 #[derive(Debug, Eq, PartialEq, PartialOrd, Ord, Clone, Copy)]
@@ -96,42 +92,42 @@ unsafe extern "C" fn print_error(
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sml_fatal(err: c_int, format: *const c_char, mut args: ...) {
+unsafe extern "C" fn sml_fatal(err: c_int, format: *const c_char, args: ...) {
     unsafe { print_error(SMLMessageLevel::Fatal, err, format, args) };
     abort();
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sml_error(err: c_int, format: *const c_char, mut args: ...) {
+unsafe extern "C" fn sml_error(err: c_int, format: *const c_char, args: ...) {
     unsafe { print_error(SMLMessageLevel::Error, err, format, args) };
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sml_warn(err: c_int, format: *const c_char, mut args: ...) {
+unsafe extern "C" fn sml_warn(err: c_int, format: *const c_char, args: ...) {
     unsafe { print_error(SMLMessageLevel::Warn, err, format, args) };
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sml_notice(format: *const c_char, mut args: ...) {
+unsafe extern "C" fn sml_notice(format: *const c_char, args: ...) {
     unsafe { print_error(SMLMessageLevel::Notice, 0, format, args) };
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sml_sysfatal(format: *const c_char, mut args: ...) {
+unsafe extern "C" fn sml_sysfatal(format: *const c_char, args: ...) {
     if let Some(errno) = std::io::Error::last_os_error().raw_os_error() {
         unsafe { print_syserror(SMLMessageLevel::Fatal, errno, format, args) };
     }
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sml_syserror(format: *const c_char, mut args: ...) {
+unsafe extern "C" fn sml_syserror(format: *const c_char, args: ...) {
     if let Some(errno) = std::io::Error::last_os_error().raw_os_error() {
         unsafe { print_syserror(SMLMessageLevel::Error, errno, format, args) };
     }
 }
 
 #[unsafe(no_mangle)]
-unsafe extern "C" fn sml_syswarn(format: *const c_char, mut args: ...) {
+unsafe extern "C" fn sml_syswarn(format: *const c_char, args: ...) {
     if let Some(errno) = std::io::Error::last_os_error().raw_os_error() {
         unsafe { print_syserror(SMLMessageLevel::Warn, errno, format, args) };
     }
@@ -180,4 +176,5 @@ extern "C" fn sml_msg_init() {
             tracing_subscriber::fmt().with_max_level(Level::TRACE).init();
         }
     };
+    tracing::info!("logging have been initialized.")
 }
