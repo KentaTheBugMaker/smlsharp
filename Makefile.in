@@ -14,9 +14,10 @@ SMLSHARP_ENV = SMLSHARP_HEAPSIZE=32M:2G
 NETLIB_CFLAGS = $(CFLAGS) -DIEEE_8087 -DMALLOC=sml_xmalloc -DLong=int
 
 RUST_SOURCE = \
-  smlsharp_rt/src/lib.rs\
-  smlsharp_rt/src/error.rs\
-  smlsharp_rt/src/signal.rs\
+  smlsharp_rt/src/lib.rs \
+  smlsharp_rt/src/error.rs \
+  smlsharp_rt/src/signal.rs \
+  smlsharp_rt/src/top.rs \
   src/runtime/callback.c \
   src/runtime/control.c \
   src/runtime/exn.c \
