@@ -107,8 +107,12 @@ alloc_safe_points(struct sml_gcroot **gcroot, size_t inc)
 	struct sml_gcroot *p = *gcroot;
 	struct safe_point *ret;
 	size_t minsize, allocsize;
-
+	sml_notice("fn alloc_safe_points enter");
 	if (REST_SAFE_POINTS(p) < inc) {
+		sml_notice("fn alloc_safe_points extending");
+		if (p == NULL){
+			sml_notice("*gcroot is null");
+		}
 		minsize = p->num_points + p->num_tops + inc;
 		minsize = minsize * sizeof(struct safe_point);
 		minsize = sizeof(struct sml_gcroot) + minsize;
@@ -131,7 +135,7 @@ sml_gcroot(void *gcroot_p, void (*smltabb)(void), void *smlftab, void *smlroot)
 	struct safe_point *dst;
 	const intptr_t *points;
 	size_t inc = 0, i;
-
+	sml_notice("fn sml_gcroot *gcroot = %p",*gcroot);
 	if (smlftab) {
 		for (t = ftab; t->num_safe_points > 0; t = NEXT_LAYOUT(t))
 			inc += t->num_safe_points;
@@ -139,8 +143,9 @@ sml_gcroot(void *gcroot_p, void (*smltabb)(void), void *smlftab, void *smlroot)
 	if (smlroot)
 		inc += 1;
 	dst = alloc_safe_points(gcroot, inc);
-
+	sml_notice("fn sml_gcroot alloc_safe_point executed");
 	if (smlftab) {
+		sml_notice("fn sml_gcroot setting safepoints");
 		for (t = ftab; t->num_safe_points > 0; t = NEXT_LAYOUT(t)) {
 			points = SAFE_POINTS(t);
 			for (i = 0; i < t->num_safe_points; i++) {
@@ -151,6 +156,7 @@ sml_gcroot(void *gcroot_p, void (*smltabb)(void), void *smlftab, void *smlroot)
 		}
 	}
 	if (smlroot) {
+		sml_notice("fn sml_gcroot setting gcroot");
 		dst->addr = tops;
 		dst->layout = NULL;
 		dst++;
@@ -224,10 +230,10 @@ sml_gcroot_load(void (* const *sml_loads)(void *), unsigned int count)
 	return gcroot;
 }
 
+
 void
 sml_gcroot_unload(struct sml_gcroot *gcroot)
 {
-	/* ToDo: free gcroot memory */
 	gcroot->num_points = 0;
 	gcroot->num_tops = 0;
 }

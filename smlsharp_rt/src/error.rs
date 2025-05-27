@@ -1,4 +1,4 @@
-use std::{fs::OpenOptions, process::abort, sync::OnceLock};
+use std::{fs::OpenOptions, process::abort};
 
 use libc::{c_char, c_int};
 use printf_compat::output;
@@ -60,7 +60,7 @@ unsafe extern "C" fn print_error(level: Level, err: c_int, format: *const c_char
 #[unsafe(no_mangle)]
 unsafe extern "C" fn sml_fatal(err: c_int, format: *const c_char, args: ...) {
     unsafe { print_error(Level::ERROR, err, format, args) };
-    abort();
+    panic!();
 }
 
 #[unsafe(no_mangle)]

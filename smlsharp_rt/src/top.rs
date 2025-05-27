@@ -1,11 +1,5 @@
 use std::{
-    alloc::{self, alloc},
-    cmp::Ordering,
-    mem::{transmute, transmute_copy},
-    num,
-    os::raw::c_void,
-    process::abort,
-    sync::atomic::AtomicPtr,
+    cmp::Ordering, mem::transmute, os::raw::c_void, process::abort, sync::atomic::AtomicPtr,
 };
 
 use libc::{c_char, c_uint, intptr_t, size_t, uint16_t, uintptr_t};
@@ -51,11 +45,16 @@ struct SMLGCRoot {
      * toplevel_objects */
 }
 
-fn new_gcroot() -> &'static mut SMLGCRoot {
+fn new_gcroot() -> *mut SMLGCRoot {
+    tracing::info!("new_gcroot enter");
     //SMLGCRootはSMLSharpプログラム側がいじるので元のC言語の実装と同一にする
     //アロケーション回数を減らすためにある程度余計に確保しておく
     if let Ok(gcroot_layout) = std::alloc::Layout::from_size_align(PAGE_SIZE, PAGE_SIZE) {
         let gcroot = unsafe { std::alloc::alloc(gcroot_layout) };
+        if gcroot.is_null() {
+            tracing::error!("Allocation Error");
+            std::alloc::handle_alloc_error(gcroot_layout);
+        }
 
         let gcroot = gcroot as *mut SMLGCRoot;
         unsafe {
@@ -67,13 +66,15 @@ fn new_gcroot() -> &'static mut SMLGCRoot {
                 item: [],
             });
         };
-        unsafe { transmute(gcroot) }
+
+        tracing::info!("new_gcroot exit");
+        gcroot
     } else {
         tracing::error!("Failed to Allocate new GCRoot");
-        abort()
+        panic!();
     }
 }
-#[inline]
+
 fn rest_safe_points(allocsize: usize, num_points: usize, num_tops: usize) -> usize {
     //割り当てた領域から 管理領域32バイト を引いてSafePointの大きさで割ると
     //現在のSafePointの容量となる
@@ -82,43 +83,58 @@ fn rest_safe_points(allocsize: usize, num_points: usize, num_tops: usize) -> usi
 }
 /// 内部でreallocするのでSMLGCRootのポインタが変わる
 /// そのため2重ポインタとする
-fn alloc_safe_points(gcroot: &mut &mut SMLGCRoot, inc: size_t) -> *mut SafePoint {
-    let num_points = gcroot.num_points;
-    let num_tops = gcroot.num_tops;
-    let allocsize = gcroot.allocsize;
-    if (rest_safe_points(allocsize, num_points, num_tops) < inc) {
-        //スロットはinc分は必要
-        let minsize = num_points + num_tops + inc;
-        //今までのgcrootにある分と合わせた最低限必要な領域
-        let minsize = minsize * size_of::<SafePoint>();
-        //管理領域も合わせた最低限必要な領域
-        let minsize = size_of::<SMLGCRoot>() + minsize;
-        //
-        let allocsize = minsize.checked_next_multiple_of(PAGE_SIZE).unwrap();
-        // アロケータに渡すためのレイアウトの復元
-        if let Ok(layout) = std::alloc::Layout::from_size_align(gcroot.allocsize, PAGE_SIZE) {
-            //拡張
-            gcroot.num_points += inc;
-            let raw_ptr: &mut SMLGCRoot = (*gcroot);
+fn alloc_safe_points(gcroot: &mut Option<&mut SMLGCRoot>, inc: size_t) -> *mut SafePoint {
+    tracing::info!("alloc_safe_points enter");
+    if let Some(p) = gcroot {
+        let num_points = p.num_points;
+        let num_tops = p.num_tops;
+        let allocsize = p.allocsize;
+        if rest_safe_points(allocsize, num_points, num_tops) < inc {
+            tracing::info!("alloc_safe_point extend start");
+            //スロットはinc分は必要
+            let minsize = num_points + num_tops + inc;
+            //今までのgcrootにある分と合わせた最低限必要な領域
+            let minsize = minsize * size_of::<SafePoint>();
+            //管理領域も合わせた最低限必要な領域
+            let minsize = size_of::<SMLGCRoot>() + minsize;
+            //
+            let allocsize = minsize.checked_next_multiple_of(PAGE_SIZE).unwrap();
+            // アロケータに渡すためのレイアウトの復元
+            if let Ok(layout) = std::alloc::Layout::from_size_align(p.allocsize, PAGE_SIZE) {
+                tracing::info!("alloc_safe_point layout Ok");
+                //拡張
+                p.num_points += inc;
+                let raw_ptr = (*p as *mut SMLGCRoot).addr();
 
-            let p = unsafe { std::alloc::realloc(transmute(raw_ptr), layout, allocsize) };
-            let view = unsafe { p.add(std::mem::size_of::<SMLGCRoot>()) as *mut SafePoint };
-            let p: &mut SMLGCRoot = unsafe { transmute(p) };
-            //拡張した分を反映する
-            p.allocsize = allocsize;
+                let p = unsafe { std::alloc::realloc(transmute(raw_ptr), layout, allocsize) };
+                let view = unsafe { p.add(std::mem::size_of::<SMLGCRoot>()) as *mut SafePoint };
+                let p: &mut SMLGCRoot = unsafe { transmute(p) };
+                //拡張した分を反映する
+                p.allocsize = allocsize;
 
-            let view = unsafe { view.add(num_points + num_tops) };
-            *gcroot = p;
+                let view = unsafe { view.add(num_points + num_tops) };
+                *gcroot = Some(p);
 
-            view
+                tracing::info!("alloc_safe_point exit");
+                view
+            } else {
+                tracing::error!("Failed to Extend capacity of SMLGCRoot");
+                panic!();
+            }
         } else {
-            tracing::error!("Failed to Extend capacity of SMLGCRoot");
-            abort()
+            p.num_points += inc;
+            let ret= unsafe {
+                let ptr:*mut SafePoint = std::mem::transmute(p);
+                ptr.byte_add(size_of::<SMLGCRoot>())
+                .add(num_points+num_tops)
+            };
+
+            tracing::info!("alloc_safe_point exit");
+            ret
         }
     } else {
-        let ret = &mut gcroot.item[num_points + num_tops];
-        gcroot.num_points += inc;
-        ret
+        tracing::warn!("gcroot is null");
+        std::ptr::null_mut()
     }
 }
 fn layout_size(layout: &SMLFrameLayout) -> usize {
@@ -138,6 +154,7 @@ fn safe_points(layout: &SMLFrameLayout) -> *const intptr_t {
 fn next_layout(layout: &SMLFrameLayout) -> *const intptr_t {
     unsafe { safe_points(layout).add(layout.num_safe_points as usize) }
 }
+
 #[unsafe(no_mangle)]
 extern "C" fn sml_gcroot(
     gcroot_p: *mut *mut SMLGCRoot,
@@ -145,7 +162,8 @@ extern "C" fn sml_gcroot(
     smlftab: Option<&SMLFrameLayout>,
     sml_root: Option<&ToplevelObjects>,
 ) {
-    let gcroot: &mut &mut SMLGCRoot = unsafe { transmute(gcroot_p) };
+    tracing::info!("sml_gcroot enter ");
+    let gcroot: &mut Option<&mut SMLGCRoot> = unsafe { transmute(gcroot_p) };
     let mut points: *const intptr_t;
     let mut inc = 0;
     let i = 0;
@@ -162,10 +180,6 @@ extern "C" fn sml_gcroot(
     }
     if sml_root.is_some() {
         inc += 1;
-        unsafe {
-            gcroot.num_tops += 1;
-            gcroot.num_points -= 1;
-        }
     }
     let mut dst = alloc_safe_points(gcroot, inc as usize);
     if let Some(ftab) = smlftab {
@@ -197,12 +211,17 @@ extern "C" fn sml_gcroot(
             dst.layout = std::ptr::null();
         }
         dst = unsafe { dst.add(1) };
+        if let Some(gcroot) = gcroot {
+            gcroot.num_tops += 1;
+            gcroot.num_points -= 1;
+        }
     }
+    tracing::info!("sml_gcroot exit");
 }
 
 fn cmp_safe_point(s1: &SafePoint, s2: &SafePoint) -> Ordering {
     tracing::info!("cmp_safe_point enter");
-    let res=if s1.layout.is_null() && !s2.layout.is_null() {
+    let res = if s1.layout.is_null() && !s2.layout.is_null() {
         std::cmp::Ordering::Less
     } else if s1.layout.is_null() && !s2.layout.is_null() {
         std::cmp::Ordering::Greater
@@ -222,19 +241,19 @@ fn cmp_safe_point(s1: &SafePoint, s2: &SafePoint) -> Ordering {
 }
 
 fn sort_safe_points(gcroot: &mut SMLGCRoot) {
-    
     tracing::info!("sort_safe_point enter");
     let ptr = gcroot.item.as_mut_ptr();
     let view = unsafe { std::slice::from_raw_parts_mut(ptr, gcroot.num_points + gcroot.num_tops) };
     view.sort_by(cmp_safe_point);
-    
+
     tracing::info!("sort_safe_point exit");
 }
 static GCROOT_LIST: AtomicPtr<SMLGCRoot> = AtomicPtr::new(std::ptr::null_mut());
 
 fn register_gcroot(gcroot: &mut SMLGCRoot) {
+    tracing::info!("register_gcroot enter");
     let first = GCROOT_LIST.load(std::sync::atomic::Ordering::Relaxed);
-    if (first.is_null()
+    if first.is_null()
         && GCROOT_LIST
             .compare_exchange(
                 first,
@@ -242,7 +261,7 @@ fn register_gcroot(gcroot: &mut SMLGCRoot) {
                 std::sync::atomic::Ordering::Release,
                 std::sync::atomic::Ordering::Relaxed,
             )
-            .is_ok())
+            .is_ok()
     {
         return;
     };
@@ -261,29 +280,42 @@ fn register_gcroot(gcroot: &mut SMLGCRoot) {
             }
         }
     }
+
+    tracing::info!("register_gcroot exit");
 }
 
 #[unsafe(no_mangle)]
 extern "C" fn sml_gcroot_load(
-    sml_loads: *const extern "C" fn(&mut SMLGCRoot),
+    sml_loads: *const extern "C" fn(*mut SMLGCRoot),
     count: c_uint,
-) -> &'static mut SMLGCRoot {
+) -> *mut SMLGCRoot {
+    tracing::info!("sml_gcroot_load enter");
     let mut gcroot = new_gcroot();
+    if gcroot.is_null(){
+        tracing::error!("gcroot returned null");
+    }
     let count = count as usize;
     for i in 0..count {
         if let Some(ldr) = unsafe { sml_loads.add(i).as_ref() } {
-            ldr(&mut gcroot);
+            ldr(gcroot);
         }
     }
-    sort_safe_points(&mut gcroot);
-    register_gcroot(&mut gcroot);
+    if let Some(gcroot) = unsafe { gcroot.as_mut() } {
+        sort_safe_points(gcroot);
+        register_gcroot(gcroot);
+    }else{
+        tracing::warn!("new");
+    }
+    tracing::info!("sml_gcroot_load exit");
     return gcroot;
 }
 
 #[unsafe(no_mangle)]
 extern "C" fn sml_gcroot_unload(gcroot: &mut SMLGCRoot) {
+    tracing::info!("sml_gcroot_unload enter");
     gcroot.num_points = 0;
     gcroot.num_tops = 0;
+    tracing::info!("sml_gcroot_unload exit");
 }
 
 fn binary_search(keyaddr: *const c_void, b: &[SafePoint]) -> Option<&SafePoint> {
@@ -322,6 +354,7 @@ fn view_mut(x: &mut SMLGCRoot) -> &mut [SafePoint] {
 
 #[unsafe(no_mangle)]
 extern "C" fn sml_lookup_frametable(retaddr: *mut c_void) -> Option<&'static SMLFrameLayout> {
+    tracing::info!("sml_lookup_frametable enter");
     let mut p_raw = GCROOT_LIST.load(std::sync::atomic::Ordering::Acquire);
     loop {
         let p = unsafe { p_raw.as_ref() };
@@ -329,6 +362,7 @@ extern "C" fn sml_lookup_frametable(retaddr: *mut c_void) -> Option<&'static SML
             let view = &view(p)[0..];
             let s = binary_search(retaddr, view);
             if let Some(s) = s {
+                tracing::info!("sml_lookup_frametable exit");
                 return unsafe { s.layout.as_ref() };
             }
             p_raw = p.next.load(std::sync::atomic::Ordering::Acquire);
@@ -345,6 +379,7 @@ extern "C" fn sml_global_enum_ptr(
     trace: extern "C" fn(*mut *mut c_void, *mut c_void),
     data: *mut c_void,
 ) {
+    tracing::info!("sml_global_enum_ptr enter");
     let mut p_raw = GCROOT_LIST.load(std::sync::atomic::Ordering::Acquire);
     loop {
         let p = unsafe { p_raw.as_mut() };
@@ -370,4 +405,5 @@ extern "C" fn sml_global_enum_ptr(
             break;
         }
     }
+    tracing::info!("sml_global_enum_ptr exit");
 }

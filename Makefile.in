@@ -10,7 +10,7 @@ SMLYACC = src/ml-yacc/smlyacc
 SMLFORMAT = src/smlformat/smlformat
 SMLSHARP = src/compiler/smlsharp
 LLVM_PLUGIN = src/llvm/smlsharp_gc-$(LLVM_VERSION).$(DLLEXT)
-SMLSHARP_ENV = SMLSHARP_HEAPSIZE=32M:2G
+SMLSHARP_ENV = SMLSHARP_HEAPSIZE=32M:2G SMLSHARP_VERBOSE=5 SMLSHARP_LOGFILE=RT.log
 NETLIB_CFLAGS = $(CFLAGS) -DIEEE_8087 -DMALLOC=sml_xmalloc -DLong=int
 
 RUST_SOURCE = \
@@ -52,6 +52,7 @@ RUNTIME_DEBUG_OBJECTS = \
   src/runtime/livecheck.$(OBJEXT) \
   src/runtime/dbglog.$(OBJEXT)
 LIBSMLSHARP_TARGETS = \
+  src/runtime/call_with_cleanup.$(OBJEXT) \
   src/runtime/main.$(OBJEXT) \
   src/runtime/libsmlsharp.$(LIBEXT)
 TEST_SUPPORT_OBJECTS = \
@@ -88,6 +89,9 @@ clean: PHONY
 	-rm -f $(LLVM_PLUGIN_OBJECTS)
 	-rm -f $(TEST_SUPPORT_OBJECTS)
 	-rm -f $(ALL_OBJECTS) $(ALL_GEN_FILES)
+	cd smlsharp_rt && \
+	cargo clean \
+	-rm -f src/runtime/libsmlsharp.$(OBJEXT)
 @MKREL@	-rm -f RELEASE
 
 distclean: PHONY clean
@@ -160,6 +164,7 @@ PHONY: # force to rebuild
 # -------- runtime --------
 
 src/runtime/libsmlsharp.$(LIBEXT) : $(RUST_SOURCE)
+	rm -rf src/runtime/libsmlsharp.$(OBJEXT) && \
 	cd smlsharp_rt && \
 	cargo +nightly build --release && \
 	cd ../ &&\

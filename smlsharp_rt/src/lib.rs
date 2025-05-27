@@ -1,16 +1,12 @@
 #![feature(c_variadic)]
 use std::os::raw::{c_ulong, c_void};
 
-use libc::{c_char, c_int};
 use signal::SmlCheckHookFn;
 
 mod error;
 mod signal;
 mod xmalloc;
-mod top;
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//mod top;//crashing
 
 #[cfg(test)]
 mod tests {
